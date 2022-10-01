@@ -5,3 +5,8 @@
 body {
   @apply bg-slate-700 text-slate-300;
 }
+
+#app {
+  width: 100vw;
+  height: 100vh;
+}
