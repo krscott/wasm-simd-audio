@@ -24,9 +24,25 @@ export const FileUpload: Fc<{
 
   return (
     <input
-      className="block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50
-      text-sm text-gray-900 focus:outline-none
-      dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:placeholder-gray-400"
+      className="
+        block
+        h-full
+        w-full
+        cursor-pointer
+        rounded-full
+        border
+        border-gray-300
+        bg-gray-50
+        p-4
+        align-middle
+        text-sm
+        text-gray-900
+        file:hidden
+        dark:border-gray-600
+        dark:bg-gray-700
+        dark:text-gray-400
+        dark:placeholder-gray-400
+      "
       type="file"
       onChange={onChange}
     />
