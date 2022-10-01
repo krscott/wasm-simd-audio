@@ -23,55 +23,41 @@ export function App() {
 
     const analyzer = audioContext.createAnalyser();
     // analyzer.fftSize = 64;
+    analyzer.smoothingTimeConstant = 0.2;
+    analyzer.maxDecibels = -24;
+    analyzer.minDecibels = -130;
 
     const audioSource = audioContext.createMediaElementSource(audio);
     audioSource.connect(audioContext.destination);
     audioSource.connect(analyzer);
 
-    const dataArray = new Uint8Array(analyzer.frequencyBinCount);
-    // const dataArray = new Float32Array(analyzer.frequencyBinCount);
+    const freqArray = new Uint8Array(analyzer.frequencyBinCount);
+    const timeArray = new Uint8Array(analyzer.fftSize);
 
     const ctx = canvas.getContext("2d")!;
 
-    // const renderId = Math.random();
-
     let stopFlag = false;
 
-    const dataWidth = canvas.width / dataArray.length;
+    const freqDatumWidth = canvas.width / freqArray.length;
+    const timeDatumWidth = canvas.width / timeArray.length;
+    const yscale = canvas.height / 256;
 
+    // Animation Loop
     const animate = () => {
       if (stopFlag) return;
 
-      // console.log(`tick ${renderId}`);
-
       requestAnimationFrame(animate);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      analyzer.getByteFrequencyData(dataArray);
-      // analyzer.getFloatFrequencyData(dataArray);
+      analyzer.getByteFrequencyData(freqArray);
+      analyzer.getByteTimeDomainData(timeArray);
 
-      // console.log(dataArray);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "lightskyblue";
+      drawSignal(ctx, timeArray, 0, canvas.height, timeDatumWidth, yscale);
 
       ctx.strokeStyle = "white";
-      ctx.beginPath();
-
-      for (let i = 0, len = dataArray.length; i < len; ++i) {
-        const dataHeight = 1 + dataArray[i];
-
-        const x = i * dataWidth;
-        const y = canvas.height - dataHeight;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-
-        // ctx.fillStyle = "white";
-        // ctx.fillRect(x, y, dataWidth - 2, dataHeight);
-      }
-
-      ctx.stroke();
+      drawSignal(ctx, freqArray, 0, canvas.height, freqDatumWidth, yscale);
     };
 
     requestAnimationFrame(animate);
@@ -98,3 +84,27 @@ export function App() {
     </div>
   );
 }
+
+const drawSignal = (
+  ctx: CanvasRenderingContext2D,
+  data: Uint8Array,
+  x0: number,
+  y0: number,
+  xscale: number,
+  yscale: number
+) => {
+  ctx.beginPath();
+
+  for (let i = 0, len = data.length; i < len; ++i) {
+    const x = x0 + i * xscale;
+    const y = y0 - data[i] * yscale;
+
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.stroke();
+};
