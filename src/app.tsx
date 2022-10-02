@@ -1,6 +1,7 @@
 import { SoundGenMenu } from "./components/soundgen";
 import { FileUpload } from "./components/ui";
 import { useState, useRef, useEffect, Ref, useMemo } from "preact/hooks";
+import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -11,15 +12,16 @@ export function App() {
   useEffect(() => {
     const canvas = canvasRef.current;
     const audio = audioSrcRef.current;
-
     if (!audio || !audioControlSrc || !canvas) return;
+
+    const audioContext = getAudioContext();
+    const audioSourceNode = getAudioSourceNode(audio);
+    if (!audioContext || !audioSourceNode) return;
 
     console.log(`load ${audioControlSrc}`);
 
     // audio.load();
     audio.play();
-
-    const audioContext = new AudioContext();
 
     const analyzer = audioContext.createAnalyser();
     // analyzer.fftSize = 64;
@@ -27,9 +29,8 @@ export function App() {
     analyzer.maxDecibels = -24;
     analyzer.minDecibels = -130;
 
-    const audioSource = audioContext.createMediaElementSource(audio);
-    audioSource.connect(audioContext.destination);
-    audioSource.connect(analyzer);
+    audioSourceNode.connect(analyzer);
+    analyzer.connect(audioContext.destination);
 
     const freqArray = new Uint8Array(analyzer.frequencyBinCount);
     const timeArray = new Uint8Array(analyzer.fftSize);
@@ -51,6 +52,8 @@ export function App() {
       analyzer.getByteFrequencyData(freqArray);
       analyzer.getByteTimeDomainData(timeArray);
 
+      // ctx.fillStyle = "rgba(51, 65, 85, 0.5)";
+      // ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.strokeStyle = "lightskyblue";
@@ -64,7 +67,7 @@ export function App() {
 
     return () => {
       stopFlag = true;
-      audioSource.disconnect();
+      audioSourceNode.disconnect();
     };
   }, [audioSrcRef.current, audioControlSrc, canvasRef.current]);
 

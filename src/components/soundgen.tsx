@@ -1,4 +1,4 @@
-import { waitMs } from "../myutil";
+import { waitMs } from "../util/waitms";
 import { Button } from "./ui";
 
 const audioCtx = new AudioContext();
