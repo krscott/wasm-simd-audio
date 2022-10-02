@@ -1,6 +1,5 @@
-import { SoundGenMenu } from "./components/soundgen";
 import { FileUpload } from "./components/ui";
-import { useState, useRef, useEffect, Ref, useMemo } from "preact/hooks";
+import { useState, useRef, useEffect } from "preact/hooks";
 import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 
 export function App() {
@@ -12,7 +11,8 @@ export function App() {
   useEffect(() => {
     const canvas = canvasRef.current;
     const audio = audioSrcRef.current;
-    if (!audio || !audioControlSrc || !canvas) return;
+    const ctx = canvas?.getContext("2d");
+    if (!audio || !audioControlSrc || !canvas || !ctx) return;
 
     const audioContext = getAudioContext();
     const audioSourceNode = getAudioSourceNode(audio);
@@ -21,7 +21,7 @@ export function App() {
     console.log(`load ${audioControlSrc}`);
 
     // audio.load();
-    audio.play();
+    // audio.play();
 
     const analyzer = audioContext.createAnalyser();
     // analyzer.fftSize = 64;
@@ -34,8 +34,6 @@ export function App() {
 
     const freqArray = new Uint8Array(analyzer.frequencyBinCount);
     const timeArray = new Uint8Array(analyzer.fftSize);
-
-    const ctx = canvas.getContext("2d")!;
 
     let stopFlag = false;
 
