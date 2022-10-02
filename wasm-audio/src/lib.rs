@@ -7,7 +7,7 @@ use web_sys::console;
 
 #[wasm_bindgen]
 pub fn add(left: i32, right: i32) -> i32 {
-    console::log_1(&format!("WASM: Adding {} + {}", left, right).into());
+    console::log_1(&format!("Hello from WASM: Adding {} + {}", left, right).into());
     left + right
 }
 
