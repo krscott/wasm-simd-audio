@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build:wasm": "wasm-pack build ./wasm-audio --target web && npm install wasm-audio --force --no-save",
+    "build": "npm run build:wasm && tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src/**.{tsx,ts,jsx,js}",
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "preact": "^10.10.6"
+    "preact": "^10.10.6",
+    "wasm-audio": "file:./wasm-audio/pkg"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.3.0",

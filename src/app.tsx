@@ -2,7 +2,11 @@ import { FileUpload } from "./components/ui";
 import { useState, useRef, useEffect } from "preact/hooks";
 import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 
+import { add } from "wasm-audio";
+
 export function App() {
+  console.log("Wasm: ", add(1, 2));
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const audioSrcRef = useRef<HTMLAudioElement>(null);
