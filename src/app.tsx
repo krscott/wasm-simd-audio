@@ -7,7 +7,7 @@ import { WasmFft } from "wasm-audio";
 
 // Difference from native browser analyzer node
 const wasmFftGain = 19.57467;
-const wasmFftOffset = -36.50907;
+const wasmFftOffset = -36.50907 - 30;
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -70,7 +70,10 @@ export function App() {
 
       // analyzer.getFloatFrequencyData(wasmFreqArray);
       analyzer.getFloatTimeDomainData(wasmTimeArray);
-      wasmFft.fft(wasmTimeArray, wasmFreqArray);
+      // wasmFft.fft(wasmTimeArray, wasmFreqArray);
+      wasmFft.dft(wasmTimeArray, wasmFreqArray);
+
+      // console.log(wasmFreqArray);
 
       // console.log(
       //   Math.max(...wasmFreqArray),
@@ -119,6 +122,16 @@ export function App() {
         canvas.width / wasmFreqArray.length,
         fyscale
       );
+
+      // ctx.strokeStyle = "orange";
+      // drawFloat32Signal(
+      //   ctx,
+      //   wasmFreqArray,
+      //   0,
+      //   fy0,
+      //   canvas.width / wasmFreqArray.length,
+      //   fyscale
+      // );
     };
 
     requestAnimationFrame(animate);
@@ -184,6 +197,7 @@ const drawFloat32Signal = (
     const y = y0 - data[i] * yscale;
 
     if (i === 0) {
+      // console.log(x, y);
       ctx.moveTo(x, y);
     } else {
       ctx.lineTo(x, y);
