@@ -1,6 +1,5 @@
 use rustfft::{num_complex::Complex, num_traits::Zero, FftPlanner};
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
 pub fn set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
@@ -16,12 +15,6 @@ pub fn set_panic_hook() {
 // Nightly-only for now
 // #[global_allocator]
 // static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-pub fn add(left: i32, right: i32) -> i32 {
-    console::log_1(&format!("Hello from WASM: Adding {} + {}", left, right).into());
-    left + right
-}
 
 #[wasm_bindgen]
 pub struct WasmFft {

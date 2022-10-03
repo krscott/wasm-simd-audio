@@ -2,7 +2,7 @@ import { FileUpload } from "./components/ui";
 import { useState, useRef, useEffect } from "preact/hooks";
 import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 
-import { add, WasmFft } from "wasm-audio";
+import { WasmFft } from "wasm-audio";
 // import { WasmAnalyzerWorkletNode } from "./util/fft-node";
 
 // Difference from native browser analyzer node
@@ -10,8 +10,6 @@ const wasmFftGain = 19.57467;
 const wasmFftOffset = -36.50907;
 
 export function App() {
-  console.log("Wasm: ", add(1, 2));
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const audioSrcRef = useRef<HTMLAudioElement>(null);
@@ -27,126 +25,103 @@ export function App() {
     const audioSourceNode = getAudioSourceNode(audio);
     if (!audioContext || !audioSourceNode) return;
 
-    console.log(`load ${audioControlSrc}`);
+    // console.log(`load ${audioControlSrc}`);
 
     let stopFlag = false;
 
-    (async () => {
-      // audio.load();
-      // audio.play();
+    // audio.load();
+    // audio.play();
 
-      ////////
+    const wasmFft = WasmFft.new();
 
-      // await audioContext.audioWorklet.addModule(
-      //   new URL("./util/fft-processor.worklet.ts", import.meta.url)
-      // );
+    const analyzer = audioContext.createAnalyser();
+    analyzer.fftSize = 1024;
+    analyzer.smoothingTimeConstant = 0.1;
+    // analyzer.maxDecibels = -14;
+    // analyzer.minDecibels = -130;
 
-      // const wasmFftNode = new WasmAnalyzerWorkletNode(
-      //   audioContext,
-      //   "FftProcessor"
-      // );
-      // wasmFftNode.init();
+    audioSourceNode.connect(analyzer);
+    analyzer.connect(audioContext.destination);
 
-      // audioSourceNode.connect(wasmFftNode);
-      // wasmFftNode.connect(audioContext.destination);
+    const freqFloatArray = new Float32Array(analyzer.frequencyBinCount);
+    // const freqArray = new Uint8Array(analyzer.frequencyBinCount);
+    // const timeArray = new Uint8Array(analyzer.fftSize);
 
-      const wasmFft = WasmFft.new();
+    const wasmTimeArray = new Float32Array(analyzer.fftSize);
+    const wasmFreqArray = new Float32Array(analyzer.frequencyBinCount);
 
-      ////////
+    const fyscale = 3;
+    const fy0 = 0;
 
-      const analyzer = audioContext.createAnalyser();
-      analyzer.fftSize = 1024;
-      analyzer.smoothingTimeConstant = 0.1;
-      // analyzer.maxDecibels = -14;
-      // analyzer.minDecibels = -130;
-
-      audioSourceNode.connect(analyzer);
-      analyzer.connect(audioContext.destination);
-
-      const freqFloatArray = new Float32Array(analyzer.frequencyBinCount);
-      // const freqArray = new Uint8Array(analyzer.frequencyBinCount);
-      // const timeArray = new Uint8Array(analyzer.fftSize);
-
-      const wasmTimeArray = new Float32Array(analyzer.fftSize);
-      const wasmFreqArray = new Float32Array(analyzer.frequencyBinCount);
-
-      const fyscale = 3;
-      const fy0 = 0;
-
-      // const freqDatumWidth = canvas.width / analyzer.frequencyBinCount;
-      // const timeDatumWidth = canvas.width / timeArray.length;
-      // const yscale = canvas.height / 256;
-
-      // Animation Loop
-      const animate = () => {
-        if (stopFlag) {
-          audioSourceNode.disconnect();
-          wasmFft.free();
-          return;
-        }
-
-        requestAnimationFrame(animate);
-
-        // analyzer.getByteFrequencyData(freqArray);
-        // analyzer.getByteTimeDomainData(timeArray);
-
-        analyzer.getFloatFrequencyData(freqFloatArray);
-
-        // analyzer.getFloatFrequencyData(wasmFreqArray);
-        analyzer.getFloatTimeDomainData(wasmTimeArray);
-        wasmFft.fft(wasmTimeArray, wasmFreqArray);
-
-        // console.log(
-        //   Math.max(...wasmFreqArray),
-        //   Math.max(...freqFloatArray),
-        //   wasmFftGain * Math.max(...wasmFreqArray) + wasmFftOffset
-        // );
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // ctx.strokeStyle = "lightskyblue";
-        // drawUint8Signal(
-        //   ctx,
-        //   timeArray,
-        //   0,
-        //   canvas.height,
-        //   timeDatumWidth,
-        //   yscale
-        // );
-
-        ctx.strokeStyle = "lightskyblue";
-        drawFloat32Signal(
-          ctx,
-          wasmTimeArray,
-          0,
-          canvas.height * 0.5,
-          canvas.width / wasmTimeArray.length,
-          canvas.height * 0.5
-        );
-
-        ctx.strokeStyle = "white";
-        drawFloat32Signal(
-          ctx,
-          freqFloatArray,
-          0,
-          fy0,
-          (2 * canvas.width) / wasmTimeArray.length,
-          fyscale
-        );
-
-        ctx.strokeStyle = "orange";
-        drawWasmFloat32Signal2(
-          ctx,
-          wasmFreqArray,
-          0,
-          fy0,
-          (2 * canvas.width) / wasmTimeArray.length,
-          fyscale
-        );
-      };
+    // Animation Loop
+    const animate = () => {
+      if (stopFlag) {
+        audioSourceNode.disconnect();
+        wasmFft.free();
+        return;
+      }
 
       requestAnimationFrame(animate);
-    })().catch(console.error);
+
+      // analyzer.getByteFrequencyData(freqArray);
+      // analyzer.getByteTimeDomainData(timeArray);
+
+      analyzer.getFloatFrequencyData(freqFloatArray);
+
+      // analyzer.getFloatFrequencyData(wasmFreqArray);
+      analyzer.getFloatTimeDomainData(wasmTimeArray);
+      wasmFft.fft(wasmTimeArray, wasmFreqArray);
+
+      // console.log(
+      //   Math.max(...wasmFreqArray),
+      //   Math.max(...freqFloatArray),
+      //   wasmFftGain * Math.max(...wasmFreqArray) + wasmFftOffset
+      // );
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // ctx.strokeStyle = "lightskyblue";
+      // drawUint8Signal(
+      //   ctx,
+      //   timeArray,
+      //   0,
+      //   canvas.height,
+      //   timeDatumWidth,
+      //   canvas.height / 256
+      // );
+
+      ctx.strokeStyle = "lightskyblue";
+      drawFloat32Signal(
+        ctx,
+        wasmTimeArray,
+        0,
+        canvas.height * 0.5,
+        canvas.width / wasmTimeArray.length,
+        canvas.height * 0.5
+      );
+
+      ctx.strokeStyle = "white";
+      drawFloat32Signal(
+        ctx,
+        freqFloatArray,
+        0,
+        fy0,
+        canvas.width / freqFloatArray.length,
+        fyscale
+      );
+
+      ctx.strokeStyle = "orange";
+      drawWasmFloat32Signal2(
+        ctx,
+        wasmFreqArray,
+        0,
+        fy0,
+        canvas.width / wasmFreqArray.length,
+        fyscale
+      );
+    };
+
+    requestAnimationFrame(animate);
 
     return () => {
       stopFlag = true;
