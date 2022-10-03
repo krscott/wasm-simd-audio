@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev:vite": "vite",
     "dev": "concurrently \"npm:dev:vite\" \"npm:watch:wasm\"",
+    "dev:vite": "npm run build:wasm && vite",
     "watch:wasm": "onchange \"wasm-audio/src/**/*.rs\" \"wasm-audio/Cargo.*\" -- npm run build:wasm",
-    "build:wasm": "wasm-pack --log-level warn build ./wasm-audio --target web && npm install wasm-audio --force --no-save",
     "build": "npm run build:wasm && tsc && vite build",
+    "build:wasm": "wasm-pack --log-level warn build ./wasm-audio --target web && npm install wasm-audio --force --no-save",
     "preview": "vite preview",
     "lint": "eslint src/**.{tsx,ts,jsx,js}",
     "check": "tsc --noEmit"

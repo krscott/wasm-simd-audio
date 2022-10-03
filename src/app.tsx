@@ -2,7 +2,12 @@ import { FileUpload } from "./components/ui";
 import { useState, useRef, useEffect } from "preact/hooks";
 import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 
-import { add } from "wasm-audio";
+import { add, WasmFft } from "wasm-audio";
+// import { WasmAnalyzerWorkletNode } from "./util/fft-node";
+
+// Difference from native browser analyzer node
+const wasmFftGain = 19.57467;
+const wasmFftOffset = -36.50907;
 
 export function App() {
   console.log("Wasm: ", add(1, 2));
@@ -24,52 +29,127 @@ export function App() {
 
     console.log(`load ${audioControlSrc}`);
 
-    // audio.load();
-    // audio.play();
-
-    const analyzer = audioContext.createAnalyser();
-    // analyzer.fftSize = 64;
-    analyzer.smoothingTimeConstant = 0.2;
-    analyzer.maxDecibels = -24;
-    analyzer.minDecibels = -130;
-
-    audioSourceNode.connect(analyzer);
-    analyzer.connect(audioContext.destination);
-
-    const freqArray = new Uint8Array(analyzer.frequencyBinCount);
-    const timeArray = new Uint8Array(analyzer.fftSize);
-
     let stopFlag = false;
 
-    const freqDatumWidth = canvas.width / freqArray.length;
-    const timeDatumWidth = canvas.width / timeArray.length;
-    const yscale = canvas.height / 256;
+    (async () => {
+      // audio.load();
+      // audio.play();
 
-    // Animation Loop
-    const animate = () => {
-      if (stopFlag) return;
+      ////////
+
+      // await audioContext.audioWorklet.addModule(
+      //   new URL("./util/fft-processor.worklet.ts", import.meta.url)
+      // );
+
+      // const wasmFftNode = new WasmAnalyzerWorkletNode(
+      //   audioContext,
+      //   "FftProcessor"
+      // );
+      // wasmFftNode.init();
+
+      // audioSourceNode.connect(wasmFftNode);
+      // wasmFftNode.connect(audioContext.destination);
+
+      const wasmFft = WasmFft.new();
+
+      ////////
+
+      const analyzer = audioContext.createAnalyser();
+      analyzer.fftSize = 1024;
+      analyzer.smoothingTimeConstant = 0.1;
+      // analyzer.maxDecibels = -14;
+      // analyzer.minDecibels = -130;
+
+      audioSourceNode.connect(analyzer);
+      analyzer.connect(audioContext.destination);
+
+      const freqFloatArray = new Float32Array(analyzer.frequencyBinCount);
+      // const freqArray = new Uint8Array(analyzer.frequencyBinCount);
+      // const timeArray = new Uint8Array(analyzer.fftSize);
+
+      const wasmTimeArray = new Float32Array(analyzer.fftSize);
+      const wasmFreqArray = new Float32Array(analyzer.frequencyBinCount);
+
+      const fyscale = 3;
+      const fy0 = 0;
+
+      // const freqDatumWidth = canvas.width / analyzer.frequencyBinCount;
+      // const timeDatumWidth = canvas.width / timeArray.length;
+      // const yscale = canvas.height / 256;
+
+      // Animation Loop
+      const animate = () => {
+        if (stopFlag) {
+          audioSourceNode.disconnect();
+          wasmFft.free();
+          return;
+        }
+
+        requestAnimationFrame(animate);
+
+        // analyzer.getByteFrequencyData(freqArray);
+        // analyzer.getByteTimeDomainData(timeArray);
+
+        analyzer.getFloatFrequencyData(freqFloatArray);
+
+        // analyzer.getFloatFrequencyData(wasmFreqArray);
+        analyzer.getFloatTimeDomainData(wasmTimeArray);
+        wasmFft.fft(wasmTimeArray, wasmFreqArray);
+
+        // console.log(
+        //   Math.max(...wasmFreqArray),
+        //   Math.max(...freqFloatArray),
+        //   wasmFftGain * Math.max(...wasmFreqArray) + wasmFftOffset
+        // );
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // ctx.strokeStyle = "lightskyblue";
+        // drawUint8Signal(
+        //   ctx,
+        //   timeArray,
+        //   0,
+        //   canvas.height,
+        //   timeDatumWidth,
+        //   yscale
+        // );
+
+        ctx.strokeStyle = "lightskyblue";
+        drawFloat32Signal(
+          ctx,
+          wasmTimeArray,
+          0,
+          canvas.height * 0.5,
+          canvas.width / wasmTimeArray.length,
+          canvas.height * 0.5
+        );
+
+        ctx.strokeStyle = "white";
+        drawFloat32Signal(
+          ctx,
+          freqFloatArray,
+          0,
+          fy0,
+          (2 * canvas.width) / wasmTimeArray.length,
+          fyscale
+        );
+
+        ctx.strokeStyle = "orange";
+        drawWasmFloat32Signal2(
+          ctx,
+          wasmFreqArray,
+          0,
+          fy0,
+          (2 * canvas.width) / wasmTimeArray.length,
+          fyscale
+        );
+      };
 
       requestAnimationFrame(animate);
-
-      analyzer.getByteFrequencyData(freqArray);
-      analyzer.getByteTimeDomainData(timeArray);
-
-      // ctx.fillStyle = "rgba(51, 65, 85, 0.5)";
-      // ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.strokeStyle = "lightskyblue";
-      drawSignal(ctx, timeArray, 0, canvas.height, timeDatumWidth, yscale);
-
-      ctx.strokeStyle = "white";
-      drawSignal(ctx, freqArray, 0, canvas.height, freqDatumWidth, yscale);
-    };
-
-    requestAnimationFrame(animate);
+    })().catch(console.error);
 
     return () => {
       stopFlag = true;
-      audioSourceNode.disconnect();
     };
   }, [audioSrcRef.current, audioControlSrc, canvasRef.current]);
 
@@ -90,9 +170,33 @@ export function App() {
   );
 }
 
-const drawSignal = (
+// const drawUint8Signal = (
+//   ctx: CanvasRenderingContext2D,
+//   data: Uint8Array,
+//   x0: number,
+//   y0: number,
+//   xscale: number,
+//   yscale: number
+// ) => {
+//   ctx.beginPath();
+
+//   for (let i = 0, len = data.length; i < len; ++i) {
+//     const x = x0 + i * xscale;
+//     const y = y0 - data[i] * yscale;
+
+//     if (i === 0) {
+//       ctx.moveTo(x, y);
+//     } else {
+//       ctx.lineTo(x, y);
+//     }
+//   }
+
+//   ctx.stroke();
+// };
+
+const drawFloat32Signal = (
   ctx: CanvasRenderingContext2D,
-  data: Uint8Array,
+  data: Float32Array,
   x0: number,
   y0: number,
   xscale: number,
@@ -103,6 +207,30 @@ const drawSignal = (
   for (let i = 0, len = data.length; i < len; ++i) {
     const x = x0 + i * xscale;
     const y = y0 - data[i] * yscale;
+
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.stroke();
+};
+
+const drawWasmFloat32Signal2 = (
+  ctx: CanvasRenderingContext2D,
+  data: Float32Array,
+  x0: number,
+  y0: number,
+  xscale: number,
+  yscale: number
+) => {
+  ctx.beginPath();
+
+  for (let i = 0, len = data.length; i < len; ++i) {
+    const x = x0 + i * xscale;
+    const y = y0 - (data[i] * wasmFftGain + wasmFftOffset) * yscale;
 
     if (i === 0) {
       ctx.moveTo(x, y);
