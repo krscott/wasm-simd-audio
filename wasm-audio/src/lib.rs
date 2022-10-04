@@ -1,10 +1,10 @@
 mod dft;
-mod fft1;
-mod rustfftwrapper;
+mod fft;
+mod wasmfft;
 
 // use wasm_bindgen::prelude::*;
 
-pub use rustfftwrapper::*;
+pub use wasmfft::*;
 
 pub(crate) fn set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the

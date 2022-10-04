@@ -70,8 +70,8 @@ export function App() {
 
       // analyzer.getFloatFrequencyData(wasmFreqArray);
       analyzer.getFloatTimeDomainData(wasmTimeArray);
-      // wasmFft.fft(wasmTimeArray, wasmFreqArray);
-      wasmFft.dft(wasmTimeArray, wasmFreqArray);
+      // wasmFft.lib_fft(wasmTimeArray, wasmFreqArray);
+      wasmFft.fft(wasmTimeArray, wasmFreqArray);
 
       // console.log(wasmFreqArray);
 
