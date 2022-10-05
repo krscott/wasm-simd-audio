@@ -36,7 +36,7 @@ pub fn fft(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
     })
 }
 
-fn bit_reverse_copy<T: Copy>(input: &[T], output: &mut [T]) {
+pub fn bit_reverse_copy<T: Copy>(input: &[T], output: &mut [T]) {
     assert_eq!(input.len(), output.len());
     assert!(crate::is_power_of_2(input.len()));
 
@@ -55,7 +55,7 @@ fn test_bit_reverse_copy() {
     assert_eq!(b, vec![0, 4, 2, 6, 1, 5, 3, 7]);
 }
 
-fn numbits(mut x: usize) -> usize {
+pub fn numbits(mut x: usize) -> usize {
     let mut bits = 0;
     while x > 0 {
         bits += 1;

@@ -1,5 +1,6 @@
 mod dft;
 mod fft;
+mod simdfft;
 mod wasmfft;
 
 // use wasm_bindgen::prelude::*;

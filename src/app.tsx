@@ -54,6 +54,7 @@ export function App() {
 
     const libFftPerfMs = new PerfCache();
     const fftPerfMs = new PerfCache();
+    const simdFftPerfMs = new PerfCache();
 
     const baseScale = 3;
     const baseOffset = 0;
@@ -114,17 +115,23 @@ export function App() {
       ctx.strokeStyle = "white";
       execFft((_i, o) => analyzer.getFloatFrequencyData(o));
 
-      ctx.strokeStyle = ctx.fillStyle = "yellow";
-      libFftPerfMs.put(
-        execFft((i, o) => wasmFft.lib_fft(i, o), -36.50907, 19.57467)
-      );
-      ctx.fillText(`lib: ${libFftPerfMs.avg?.toFixed(3)} ms`, 0, 10);
+      // ctx.strokeStyle = ctx.fillStyle = "yellow";
+      // libFftPerfMs.put(
+      //   execFft((i, o) => wasmFft.lib_fft(i, o), -36.50907, 19.57467)
+      // );
+      // ctx.fillText(`lib: ${libFftPerfMs.avg?.toFixed(3)} ms`, 0, 10);
 
       ctx.strokeStyle = ctx.fillStyle = "orange";
       fftPerfMs.put(
         execFft((i, o) => wasmFft.fft(i, o), -36.50907 - 30, 19.57467)
       );
       ctx.fillText(`fft: ${fftPerfMs.avg?.toFixed(3)} ms`, 0, 20);
+
+      ctx.strokeStyle = ctx.fillStyle = "pink";
+      simdFftPerfMs.put(
+        execFft((i, o) => wasmFft.simd_fft(i, o), -36.50907 - 30, 19.57467)
+      );
+      ctx.fillText(`fft: ${simdFftPerfMs.avg?.toFixed(3)} ms`, 0, 30);
     };
 
     requestAnimationFrame(animate);
