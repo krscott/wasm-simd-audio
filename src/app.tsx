@@ -125,13 +125,13 @@ export function App() {
       fftPerfMs.put(
         execFft((i, o) => wasmFft.fft(i, o), -36.50907 - 30, 19.57467)
       );
-      ctx.fillText(`fft: ${fftPerfMs.avg?.toFixed(3)} ms`, 0, 20);
+      ctx.fillText(`naive: ${fftPerfMs.avg?.toFixed(3)} ms`, 0, 20);
 
       ctx.strokeStyle = ctx.fillStyle = "pink";
       simdFftPerfMs.put(
         execFft((i, o) => wasmFft.simd_fft(i, o), -36.50907 - 30, 19.57467)
       );
-      ctx.fillText(`fft: ${simdFftPerfMs.avg?.toFixed(3)} ms`, 0, 30);
+      ctx.fillText(`simd: ${simdFftPerfMs.avg?.toFixed(3)} ms`, 0, 30);
     };
 
     requestAnimationFrame(animate);
