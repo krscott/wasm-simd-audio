@@ -3,11 +3,24 @@ import { useState, useRef, useEffect } from "preact/hooks";
 import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 
 import { WasmFft } from "wasm-audio";
-// import { WasmAnalyzerWorkletNode } from "./util/fft-node";
+import { NumericRingBuf } from "./util/ringbuf";
 
-// Difference from native browser analyzer node
-const wasmFftGain = 19.57467;
-const wasmFftOffset = -36.50907 - 30;
+class PerfCache {
+  buf: NumericRingBuf;
+  avg: number | undefined;
+
+  constructor() {
+    this.buf = new NumericRingBuf(100);
+  }
+
+  put(n: number) {
+    this.buf.put(n);
+    if (this.buf.isFull()) {
+      this.avg = this.buf.average();
+      this.buf.clear();
+    }
+  }
+}
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,33 +38,46 @@ export function App() {
     const audioSourceNode = getAudioSourceNode(audio);
     if (!audioContext || !audioSourceNode) return;
 
-    // console.log(`load ${audioControlSrc}`);
-
     let stopFlag = false;
-
-    // audio.load();
-    // audio.play();
 
     const wasmFft = WasmFft.new();
 
     const analyzer = audioContext.createAnalyser();
     analyzer.fftSize = 1024;
     analyzer.smoothingTimeConstant = 0.1;
-    // analyzer.maxDecibels = -14;
-    // analyzer.minDecibels = -130;
 
     audioSourceNode.connect(analyzer);
     analyzer.connect(audioContext.destination);
 
-    const freqFloatArray = new Float32Array(analyzer.frequencyBinCount);
-    // const freqArray = new Uint8Array(analyzer.frequencyBinCount);
-    // const timeArray = new Uint8Array(analyzer.fftSize);
+    const timeArray = new Float32Array(analyzer.fftSize);
+    const freqArray = new Float32Array(analyzer.frequencyBinCount);
 
-    const wasmTimeArray = new Float32Array(analyzer.fftSize);
-    const wasmFreqArray = new Float32Array(analyzer.frequencyBinCount);
+    const libFftPerfMs = new PerfCache();
+    const fftPerfMs = new PerfCache();
 
-    const fyscale = 3;
-    const fy0 = 0;
+    const baseScale = 3;
+    const baseOffset = 0;
+
+    const execFft = (
+      callback: (input: Float32Array, output: Float32Array) => void,
+      offset = 0,
+      scale = 1
+    ): number => {
+      const perfStart = performance.now();
+      callback(timeArray, freqArray);
+      const perfTime = performance.now() - perfStart;
+
+      drawFloat32Signal(
+        ctx,
+        freqArray,
+        0,
+        baseOffset - offset * baseScale,
+        canvas.width / freqArray.length,
+        baseScale * scale
+      );
+
+      return perfTime;
+    };
 
     // Animation Loop
     const animate = () => {
@@ -63,75 +89,42 @@ export function App() {
 
       requestAnimationFrame(animate);
 
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       // analyzer.getByteFrequencyData(freqArray);
       // analyzer.getByteTimeDomainData(timeArray);
 
-      analyzer.getFloatFrequencyData(freqFloatArray);
+      // analyzer.getFloatFrequencyData(freqFloatArray);
 
       // analyzer.getFloatFrequencyData(wasmFreqArray);
-      analyzer.getFloatTimeDomainData(wasmTimeArray);
-      // wasmFft.lib_fft(wasmTimeArray, wasmFreqArray);
-      wasmFft.fft(wasmTimeArray, wasmFreqArray);
-
-      // console.log(wasmFreqArray);
-
-      // console.log(
-      //   Math.max(...wasmFreqArray),
-      //   Math.max(...freqFloatArray),
-      //   wasmFftGain * Math.max(...wasmFreqArray) + wasmFftOffset
-      // );
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // ctx.strokeStyle = "lightskyblue";
-      // drawUint8Signal(
-      //   ctx,
-      //   timeArray,
-      //   0,
-      //   canvas.height,
-      //   timeDatumWidth,
-      //   canvas.height / 256
-      // );
+      analyzer.getFloatTimeDomainData(timeArray);
 
       ctx.strokeStyle = "lightskyblue";
       drawFloat32Signal(
         ctx,
-        wasmTimeArray,
+        timeArray,
         0,
         canvas.height * 0.5,
-        canvas.width / wasmTimeArray.length,
+        canvas.width / timeArray.length,
         canvas.height * 0.5
       );
 
+      ctx.font = "12px monospace";
+
       ctx.strokeStyle = "white";
-      drawFloat32Signal(
-        ctx,
-        freqFloatArray,
-        0,
-        fy0,
-        canvas.width / freqFloatArray.length,
-        fyscale
-      );
+      execFft((_i, o) => analyzer.getFloatFrequencyData(o));
 
-      ctx.strokeStyle = "orange";
-      drawWasmFloat32Signal2(
-        ctx,
-        wasmFreqArray,
-        0,
-        fy0,
-        canvas.width / wasmFreqArray.length,
-        fyscale
+      ctx.strokeStyle = ctx.fillStyle = "yellow";
+      libFftPerfMs.put(
+        execFft((i, o) => wasmFft.lib_fft(i, o), -36.50907, 19.57467)
       );
+      ctx.fillText(`lib: ${libFftPerfMs.avg?.toFixed(3)} ms`, 0, 10);
 
-      // ctx.strokeStyle = "orange";
-      // drawFloat32Signal(
-      //   ctx,
-      //   wasmFreqArray,
-      //   0,
-      //   fy0,
-      //   canvas.width / wasmFreqArray.length,
-      //   fyscale
-      // );
+      ctx.strokeStyle = ctx.fillStyle = "orange";
+      fftPerfMs.put(
+        execFft((i, o) => wasmFft.fft(i, o), -36.50907 - 30, 19.57467)
+      );
+      ctx.fillText(`fft: ${fftPerfMs.avg?.toFixed(3)} ms`, 0, 20);
     };
 
     requestAnimationFrame(animate);
@@ -158,30 +151,6 @@ export function App() {
   );
 }
 
-// const drawUint8Signal = (
-//   ctx: CanvasRenderingContext2D,
-//   data: Uint8Array,
-//   x0: number,
-//   y0: number,
-//   xscale: number,
-//   yscale: number
-// ) => {
-//   ctx.beginPath();
-
-//   for (let i = 0, len = data.length; i < len; ++i) {
-//     const x = x0 + i * xscale;
-//     const y = y0 - data[i] * yscale;
-
-//     if (i === 0) {
-//       ctx.moveTo(x, y);
-//     } else {
-//       ctx.lineTo(x, y);
-//     }
-//   }
-
-//   ctx.stroke();
-// };
-
 const drawFloat32Signal = (
   ctx: CanvasRenderingContext2D,
   data: Float32Array,
@@ -198,30 +167,6 @@ const drawFloat32Signal = (
 
     if (i === 0) {
       // console.log(x, y);
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  }
-
-  ctx.stroke();
-};
-
-const drawWasmFloat32Signal2 = (
-  ctx: CanvasRenderingContext2D,
-  data: Float32Array,
-  x0: number,
-  y0: number,
-  xscale: number,
-  yscale: number
-) => {
-  ctx.beginPath();
-
-  for (let i = 0, len = data.length; i < len; ++i) {
-    const x = x0 + i * xscale;
-    const y = y0 - (data[i] * wasmFftGain + wasmFftOffset) * yscale;
-
-    if (i === 0) {
       ctx.moveTo(x, y);
     } else {
       ctx.lineTo(x, y);
