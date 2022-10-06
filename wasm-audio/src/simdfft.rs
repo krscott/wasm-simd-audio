@@ -2,11 +2,10 @@
 use crate::fft::{bit_reverse_copy, numbits};
 use core::f32::consts::PI;
 use rustfft::num_complex::Complex;
+use std::arch::wasm32::*;
 
 #[target_feature(enable = "simd128")]
 pub fn fft_simd(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
-    use std::arch::wasm32::*;
-
     const TWO_PI: f32 = 2.0 * PI;
 
     // const NTWO_PI_I: Complex<f32> = Complex {
@@ -56,17 +55,11 @@ pub fn fft_simd(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
                     let idx_left_0 = k + j;
                     let idx_right_0 = idx_left_0 + mdiv2;
 
-                    let right_re_x4 = f32x4(
-                        output[idx_right_0].re,
-                        output[idx_right_0 + m].re,
-                        output[idx_right_0 + m2].re,
-                        output[idx_right_0 + m3].re,
-                    );
-                    let right_im_x4 = f32x4(
-                        output[idx_right_0].im,
-                        output[idx_right_0 + m].im,
-                        output[idx_right_0 + m2].im,
-                        output[idx_right_0 + m3].im,
+                    let (right_re_x4, right_im_x4) = complex_to_f32x4(
+                        &output[idx_right_0],
+                        &output[idx_right_0 + m],
+                        &output[idx_right_0 + m2],
+                        &output[idx_right_0 + m3],
                     );
 
                     // let t = w * output[k + j + mdiv2];
@@ -80,43 +73,32 @@ pub fn fft_simd(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
                     );
 
                     // let u = output[k + j];
-                    let u_re_x4 = f32x4(
-                        output[idx_left_0].re,
-                        output[idx_left_0 + m].re,
-                        output[idx_left_0 + m2].re,
-                        output[idx_left_0 + m3].re,
-                    );
-                    let u_im_x4 = f32x4(
-                        output[idx_left_0].im,
-                        output[idx_left_0 + m].im,
-                        output[idx_left_0 + m2].im,
-                        output[idx_left_0 + m3].im,
+                    let (u_re_x4, u_im_x4) = complex_to_f32x4(
+                        &output[idx_left_0],
+                        &output[idx_left_0 + m],
+                        &output[idx_left_0 + m2],
+                        &output[idx_left_0 + m3],
                     );
 
                     // output[k + j] = u + t;
                     // output[k + j + mdiv2] = u - t;
-                    let output_left_re = f32x4_add(u_re_x4, t_re_x4);
-                    let output_left_im = f32x4_add(u_im_x4, t_im_x4);
-                    let output_right_re = f32x4_sub(u_re_x4, t_re_x4);
-                    let output_right_im = f32x4_sub(u_im_x4, t_im_x4);
+                    let output_left_re_x4 = f32x4_add(u_re_x4, t_re_x4);
+                    let output_left_im_x4 = f32x4_add(u_im_x4, t_im_x4);
+                    let output_right_re_x4 = f32x4_sub(u_re_x4, t_re_x4);
+                    let output_right_im_x4 = f32x4_sub(u_im_x4, t_im_x4);
 
-                    output[idx_left_0].re = f32x4_extract_lane::<0>(output_left_re);
-                    output[idx_left_0 + m].re = f32x4_extract_lane::<1>(output_left_re);
-                    output[idx_left_0 + m2].re = f32x4_extract_lane::<2>(output_left_re);
-                    output[idx_left_0 + m3].re = f32x4_extract_lane::<3>(output_left_re);
-                    output[idx_left_0].im = f32x4_extract_lane::<0>(output_left_im);
-                    output[idx_left_0 + m].im = f32x4_extract_lane::<1>(output_left_im);
-                    output[idx_left_0 + m2].im = f32x4_extract_lane::<2>(output_left_im);
-                    output[idx_left_0 + m3].im = f32x4_extract_lane::<3>(output_left_im);
-
-                    output[idx_right_0].re = f32x4_extract_lane::<0>(output_right_re);
-                    output[idx_right_0 + m].re = f32x4_extract_lane::<1>(output_right_re);
-                    output[idx_right_0 + m2].re = f32x4_extract_lane::<2>(output_right_re);
-                    output[idx_right_0 + m3].re = f32x4_extract_lane::<3>(output_right_re);
-                    output[idx_right_0].im = f32x4_extract_lane::<0>(output_right_im);
-                    output[idx_right_0 + m].im = f32x4_extract_lane::<1>(output_right_im);
-                    output[idx_right_0 + m2].im = f32x4_extract_lane::<2>(output_right_im);
-                    output[idx_right_0 + m3].im = f32x4_extract_lane::<3>(output_right_im);
+                    (
+                        output[idx_left_0],
+                        output[idx_left_0 + m],
+                        output[idx_left_0 + m2],
+                        output[idx_left_0 + m3],
+                    ) = complex_from_f32x4(output_left_re_x4, output_left_im_x4);
+                    (
+                        output[idx_right_0],
+                        output[idx_right_0 + m],
+                        output[idx_right_0 + m2],
+                        output[idx_right_0 + m3],
+                    ) = complex_from_f32x4(output_right_re_x4, output_right_im_x4);
 
                     // w *= wm;
                     let tmp_w_im =
@@ -142,4 +124,40 @@ pub fn fft_simd(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
             })
         })
     })
+}
+
+fn complex_to_f32x4(
+    c0: &Complex<f32>,
+    c1: &Complex<f32>,
+    c2: &Complex<f32>,
+    c3: &Complex<f32>,
+) -> (v128, v128) {
+    let re_x4 = f32x4(c0.re, c1.re, c2.re, c3.re);
+    let im_x4 = f32x4(c0.im, c1.im, c2.im, c3.im);
+
+    (re_x4, im_x4)
+}
+
+fn complex_from_f32x4(
+    re_x4: v128,
+    im_x4: v128,
+) -> (Complex<f32>, Complex<f32>, Complex<f32>, Complex<f32>) {
+    (
+        Complex {
+            re: f32x4_extract_lane::<0>(re_x4),
+            im: f32x4_extract_lane::<0>(im_x4),
+        },
+        Complex {
+            re: f32x4_extract_lane::<1>(re_x4),
+            im: f32x4_extract_lane::<1>(im_x4),
+        },
+        Complex {
+            re: f32x4_extract_lane::<2>(re_x4),
+            im: f32x4_extract_lane::<2>(im_x4),
+        },
+        Complex {
+            re: f32x4_extract_lane::<3>(re_x4),
+            im: f32x4_extract_lane::<3>(im_x4),
+        },
+    )
 }
