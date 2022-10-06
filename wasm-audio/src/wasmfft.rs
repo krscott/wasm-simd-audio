@@ -1,7 +1,7 @@
 use rustfft::{num_complex::Complex, num_traits::Zero, FftPlanner};
 use wasm_bindgen::prelude::*;
 
-use crate::{dft::dft, fft::fft};
+use crate::{cooley_tukey::cooley_tukey_fft, dft::dft};
 
 #[wasm_bindgen]
 pub struct WasmFft {
@@ -85,7 +85,7 @@ impl WasmFft {
         });
     }
 
-    pub fn fft(&mut self, input: &[f32], output: &mut [f32]) {
+    pub fn cooley_tukey(&mut self, input: &[f32], output: &mut [f32]) {
         assert_eq!(input.len(), output.len() * 2);
         assert!(crate::is_power_of_2(input.len()));
 
@@ -96,7 +96,7 @@ impl WasmFft {
             self.input_buffer[i].re = r;
         }
 
-        fft(&self.input_buffer, &mut self.output_buffer);
+        cooley_tukey_fft(&self.input_buffer, &mut self.output_buffer);
 
         (0..output.len()).for_each(|i| {
             output[i] = (self.output_buffer[i].norm()).log10();
@@ -104,7 +104,7 @@ impl WasmFft {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn simd_fft(&mut self, input: &[f32], output: &mut [f32]) {
+    pub fn simd_cooley_tukey(&mut self, input: &[f32], output: &mut [f32]) {
         assert_eq!(input.len(), output.len() * 2);
         assert!(crate::is_power_of_2(input.len()));
 
@@ -115,7 +115,10 @@ impl WasmFft {
             self.input_buffer[i].re = r;
         }
 
-        crate::simdfft::fft_simd(&self.input_buffer, &mut self.output_buffer);
+        crate::simd_cooley_tukey::simd_cooley_tukey_fft(
+            &self.input_buffer,
+            &mut self.output_buffer,
+        );
 
         (0..output.len()).for_each(|i| {
             output[i] = (self.output_buffer[i].norm()).log10();

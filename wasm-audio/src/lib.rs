@@ -1,6 +1,6 @@
+mod cooley_tukey;
 mod dft;
-mod fft;
-mod simdfft;
+mod simd_cooley_tukey;
 mod wasmfft;
 
 // use wasm_bindgen::prelude::*;

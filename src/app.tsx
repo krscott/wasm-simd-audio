@@ -53,8 +53,8 @@ export function App() {
     const freqArray = new Float32Array(analyzer.frequencyBinCount);
 
     const libFftPerfMs = new PerfCache();
-    const fftPerfMs = new PerfCache();
-    const simdFftPerfMs = new PerfCache();
+    const cooleyPerfMs = new PerfCache();
+    const simdCoolyPerfMs = new PerfCache();
 
     const baseScale = 3;
     const baseOffset = 0;
@@ -122,16 +122,20 @@ export function App() {
       // ctx.fillText(`lib: ${libFftPerfMs.avg?.toFixed(3)} ms`, 0, 10);
 
       ctx.strokeStyle = ctx.fillStyle = "orange";
-      fftPerfMs.put(
-        execFft((i, o) => wasmFft.fft(i, o), -36.50907 - 30, 19.57467)
+      cooleyPerfMs.put(
+        execFft((i, o) => wasmFft.cooley_tukey(i, o), -36.50907 - 30, 19.57467)
       );
-      ctx.fillText(`naive: ${fftPerfMs.avg?.toFixed(3)} ms`, 0, 20);
+      ctx.fillText(`naive: ${cooleyPerfMs.avg?.toFixed(3)} ms`, 0, 20);
 
       ctx.strokeStyle = ctx.fillStyle = "pink";
-      simdFftPerfMs.put(
-        execFft((i, o) => wasmFft.simd_fft(i, o), -36.50907 - 30, 19.57467)
+      simdCoolyPerfMs.put(
+        execFft(
+          (i, o) => wasmFft.simd_cooley_tukey(i, o),
+          -36.50907 - 30,
+          19.57467
+        )
       );
-      ctx.fillText(`simd: ${simdFftPerfMs.avg?.toFixed(3)} ms`, 0, 30);
+      ctx.fillText(`simd: ${simdCoolyPerfMs.avg?.toFixed(3)} ms`, 0, 30);
     };
 
     requestAnimationFrame(animate);

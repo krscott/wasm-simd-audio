@@ -6,7 +6,7 @@ const NTWO_PI_I: Complex<f32> = Complex {
     im: -2.0 * PI,
 };
 
-pub fn fft(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
+pub fn cooley_tukey_fft(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
     assert_eq!(input.len(), output.len());
     assert!(crate::is_power_of_2(input.len()));
 

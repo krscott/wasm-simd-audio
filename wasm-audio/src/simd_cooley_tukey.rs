@@ -1,11 +1,11 @@
 #[cfg(target_arch = "wasm32")]
-use crate::fft::{bit_reverse_copy, numbits};
+use crate::cooley_tukey::{bit_reverse_copy, numbits};
 use core::f32::consts::PI;
 use rustfft::num_complex::Complex;
 use std::arch::wasm32::*;
 
 #[target_feature(enable = "simd128")]
-pub fn fft_simd(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
+pub fn simd_cooley_tukey_fft(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
     const TWO_PI: f32 = 2.0 * PI;
 
     // const NTWO_PI_I: Complex<f32> = Complex {
