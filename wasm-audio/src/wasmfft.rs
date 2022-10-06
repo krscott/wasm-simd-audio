@@ -124,6 +124,28 @@ impl WasmFft {
             output[i] = (self.output_buffer[i].norm()).log10();
         });
     }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn simd_cooley_tukey2(&mut self, input: &[f32], output: &mut [f32]) {
+        assert_eq!(input.len(), output.len() * 2);
+        assert!(crate::is_power_of_2(input.len()));
+
+        self.input_buffer.resize(input.len(), Complex::zero());
+        self.output_buffer.resize(input.len(), Complex::zero());
+
+        for (i, &r) in input.iter().enumerate() {
+            self.input_buffer[i].re = r;
+        }
+
+        crate::simd_cooley_tukey2::simd_cooley_tukey_fft2(
+            &self.input_buffer,
+            &mut self.output_buffer,
+        );
+
+        (0..output.len()).for_each(|i| {
+            output[i] = (self.output_buffer[i].norm()).log10();
+        });
+    }
 }
 
 impl Default for WasmFft {

@@ -55,6 +55,7 @@ export function App() {
     const libFftPerfMs = new PerfCache();
     const cooleyPerfMs = new PerfCache();
     const simdCoolyPerfMs = new PerfCache();
+    const simdCooly2PerfMs = new PerfCache();
 
     const baseScale = 3;
     const baseOffset = 0;
@@ -136,6 +137,16 @@ export function App() {
         )
       );
       ctx.fillText(`simd: ${simdCoolyPerfMs.avg?.toFixed(3)} ms`, 0, 30);
+
+      ctx.strokeStyle = ctx.fillStyle = "lightgreen";
+      simdCooly2PerfMs.put(
+        execFft(
+          (i, o) => wasmFft.simd_cooley_tukey2(i, o),
+          -36.50907 - 30,
+          19.57467
+        )
+      );
+      ctx.fillText(`simd2: ${simdCooly2PerfMs.avg?.toFixed(3)} ms`, 0, 40);
     };
 
     requestAnimationFrame(animate);
