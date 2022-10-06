@@ -33,21 +33,15 @@ pub fn fft_simd(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
             im: theta.sin(),
         };
 
-        let wm_re_x4 = f32x4_splat(wm.re);
-        let wm_im_x4 = f32x4_splat(wm.im);
+        // Check if there are 4 or more steps
+        if m * 4 <= n {
+            let m2 = m << 1;
+            let m3 = m2 + m;
 
-        let m2 = m << 1;
-        let m3 = m2 + m;
+            let wm_re_x4 = f32x4_splat(wm.re);
+            let wm_im_x4 = f32x4_splat(wm.im);
 
-        let mut k = 0;
-        loop {
-            let next_k = k + m * 4;
-            if next_k >= n {
-                break;
-            }
-
-            // SIMD section
-            {
+            (0..n).step_by(m * 4).for_each(|k| {
                 let mut w_re_x4 = f32x4_splat(1.);
                 let mut w_im_x4 = f32x4_splat(0.);
 
@@ -106,23 +100,21 @@ pub fn fft_simd(input: &[Complex<f32>], output: &mut [Complex<f32>]) {
                     w_re_x4 = f32x4_sub(f32x4_mul(w_re_x4, wm_re_x4), f32x4_mul(w_im_x4, wm_im_x4));
                     w_im_x4 = tmp_w_im;
                 })
-            }
-
-            k = next_k;
-        }
-
-        // Do the rest of the loop normally
-        (k..n).step_by(m).for_each(|k| {
-            let mut w = Complex::new(1., 0.);
-
-            (0..mdiv2).for_each(|j| {
-                let t = w * output[k + j + mdiv2];
-                let u = output[k + j];
-                output[k + j] = u + t;
-                output[k + j + mdiv2] = u - t;
-                w *= wm;
             })
-        })
+        } else {
+            // Only need to do 1 or 2 steps
+            (0..n).step_by(m).for_each(|k| {
+                let mut w = Complex::new(1., 0.);
+
+                (0..mdiv2).for_each(|j| {
+                    let t = w * output[k + j + mdiv2];
+                    let u = output[k + j];
+                    output[k + j] = u + t;
+                    output[k + j + mdiv2] = u - t;
+                    w *= wm;
+                })
+            })
+        }
     })
 }
 
