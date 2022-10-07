@@ -2,13 +2,14 @@
 
 An exporation in FFT implementation using Rust+WASM+SIMD.
 
-<font size="5">🎧 [Live demo](https://krscott.github.io/wasm-simd-audio/)</font>
+🎧 [Live demo](https://krscott.github.io/wasm-simd-audio/)
 
 ## Usage
 
-1. Open the [webpage](https://krscott.github.io/wasm-simd-audio/)
-2. Click the bubble on the left to select an audio file to play.
-3. Click ▶ on the audio widget.
+1. Get a [punchy audio file](https://opengameart.org/art-search-advanced?keys=&field_art_type_tid%5B%5D=12&sort_by=count&sort_order=DESC) ready to upload
+2. Open the [webpage](https://krscott.github.io/wasm-simd-audio/)
+3. Click the bubble on the left to select an audio file to play
+4. Click Play ▶ on the audio widget
 
 The calculation time of each algorithm is shown in the upper left with matching color to its plot. The white plot is the FFT plot given by the browser's audio AnalyzerNode as reference.
 
