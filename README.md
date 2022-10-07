@@ -19,7 +19,7 @@ In this project, I implement a basic FFT algorithm using WASM SIMD instructions 
 
 For example, here is the function for multiplying 2 pairs of complex numbers in parallel using `f32x4` vectors:
 
-https://github.com/krscott/wasm-simd-audio/blob/cacd4fcfe6fc48251548056a7e5608c02ef42c96/wasm-audio/src/simd_cooley_tukey2.rs#L47-L78
+https://github.com/krscott/wasm-simd-audio/blob/76f824dbddc08d2cc2702f6729183240de7077d5/wasm-audio/src/simd_cooley_tukey2.rs#L47-L90
 
 ## Results
 Although SIMD instructions do allow much faster computation throughput, they do require extra instructions for loading values in and out of the vectors. In my case, one of my SIMD implementations barely matches my naive implementation, and is still 2x slower than the `rustfft` crate:
