@@ -7,18 +7,18 @@ export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const audioSrcRef = useRef<HTMLAudioElement>(null);
-  const [audioControlSrc, setAudioControlSrc] = useState<string | undefined>();
+  const [audioFileUrl, setAudioFileUrl] = useState<string | undefined>();
 
-  useCanvasFftVis(audioSrcRef.current, audioControlSrc, canvasRef.current);
+  useCanvasFftVis(audioSrcRef.current, canvasRef.current);
 
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-2">
       <div className="flex items-center gap-4">
         <FileUpload
-          onUpload={(file) => setAudioControlSrc(URL.createObjectURL(file))}
+          onUpload={(file) => setAudioFileUrl(URL.createObjectURL(file))}
         />
         <div>
-          <audio ref={audioSrcRef} src={audioControlSrc} controls />
+          <audio ref={audioSrcRef} src={audioFileUrl} controls />
         </div>
       </div>
       <div className="border border-slate-600">

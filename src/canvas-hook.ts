@@ -123,12 +123,11 @@ const drawFloat32Signal = (
 
 export const useCanvasFftVis = (
   audio: HTMLAudioElement | null,
-  audioControlSrc: string | undefined,
   canvas: HTMLCanvasElement | null
 ) => {
   useEffect(() => {
     const ctx = canvas?.getContext("2d");
-    if (!audio || !audioControlSrc || !canvas || !ctx) return;
+    if (!audio || !canvas || !ctx) return;
 
     const audioContext = getAudioContext();
     const audioSourceNode = getAudioSourceNode(audio);
@@ -233,5 +232,5 @@ export const useCanvasFftVis = (
     return () => {
       stopFlag = true;
     };
-  }, [audio, audioControlSrc, canvas]);
+  }, [audio, canvas]);
 };
