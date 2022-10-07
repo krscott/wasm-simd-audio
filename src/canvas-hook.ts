@@ -123,10 +123,14 @@ const drawFloat32Signal = (
 };
 
 export const useCanvasFftVis = (
+  isUserGesture: boolean,
   audio: HTMLAudioElement | null,
   canvas: HTMLCanvasElement | null
 ) => {
   useEffect(() => {
+    // getAudioContext will fail forever if called without a gesture
+    if (!isUserGesture) return;
+
     const ctx = canvas?.getContext("2d");
     if (!audio || !canvas || !ctx) return;
 
@@ -233,5 +237,5 @@ export const useCanvasFftVis = (
     return () => {
       stopFlag = true;
     };
-  }, [audio, canvas]);
+  }, [isUserGesture, audio, canvas]);
 };
