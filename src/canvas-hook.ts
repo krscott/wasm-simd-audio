@@ -6,9 +6,10 @@ import { NumericRingBuf } from "./util/ringbuf";
 const baseOffset = 0;
 const baseScale = 3;
 
+// Scale and offset to make plots match browser FFT.
+// These values were determined emperically.
 const libfftOffset = baseOffset + 36.50907 * baseScale;
 const libfftScale = 19.57467 * baseScale;
-
 const myfftOffset = libfftOffset + 29.6 * baseScale;
 const myfftScale = libfftScale;
 
