@@ -4,7 +4,7 @@ import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 import { NumericRingBuf } from "./util/ringbuf";
 
 const baseOffset = 0;
-const baseScale = 3;
+const baseScale = 4;
 
 // Scale and offset to make plots match browser FFT.
 // These values were determined emperically.
@@ -17,7 +17,7 @@ type FftBenchmarkOptions = {
   callback: (input: Float32Array, output: Float32Array) => void;
   name: string;
   color: string;
-  textY?: number;
+  textRow?: number;
   plotOffset?: number;
   plotScale?: number;
   ringBufferSize?: number;
@@ -32,7 +32,7 @@ class FftBenchmark {
   callback: (input: Float32Array, output: Float32Array) => void;
   name: string;
   color: string;
-  textY: number;
+  textRow: number;
   plotOffset: number;
   plotScale: number;
 
@@ -43,7 +43,7 @@ class FftBenchmark {
     this.callback = opts.callback;
     this.name = opts.name;
     this.color = opts.color;
-    this.textY = opts.textY ?? 10;
+    this.textRow = opts.textRow ?? 0;
     this.plotOffset = opts.plotOffset ?? baseOffset;
     this.plotScale = opts.plotScale ?? baseScale;
     this.drawPlot = opts.drawPlot ?? true;
@@ -83,16 +83,24 @@ class FftBenchmark {
         ctx,
         freqArray,
         0,
-        this.plotOffset,
+        this.plotOffset * (canvas.height / 400.0),
         canvas.width / freqArray.length,
-        this.plotScale
+        this.plotScale * (canvas.height / 400.0)
       );
     }
 
     if (this.drawCalcTime) {
-      ctx.font = "12px monospace";
+      const fontSize = Math.min(
+        Math.max(Math.round(canvas.height / 40), 12),
+        64
+      );
+      ctx.font = `${fontSize}px monospace`;
       ctx.fillStyle = this.color;
-      ctx.fillText(`${this.name}: ${this.avg?.toFixed(3)} ms`, 0, this.textY);
+      ctx.fillText(
+        `${this.name}: ${this.avg?.toFixed(3)} ms`,
+        0,
+        (1 + this.textRow) * fontSize
+      );
     }
   }
 }
@@ -164,7 +172,7 @@ export const useCanvasFftVis = (
         callback: (i, o) => wasmFft.lib_fft(i, o),
         name: "rslib",
         color: "yellow",
-        textY: 10,
+        textRow: 0,
         plotOffset: libfftOffset,
         plotScale: libfftScale,
       }),
@@ -173,7 +181,7 @@ export const useCanvasFftVis = (
         callback: (i, o) => wasmFft.cooley_tukey(i, o),
         name: "naive",
         color: "orange",
-        textY: 20,
+        textRow: 1,
         plotOffset: myfftOffset,
         plotScale: myfftScale,
       }),
@@ -182,7 +190,7 @@ export const useCanvasFftVis = (
         callback: (i, o) => wasmFft.simd_cooley_tukey(i, o),
         name: "simd1",
         color: "pink",
-        textY: 30,
+        textRow: 2,
         plotOffset: myfftOffset,
         plotScale: myfftScale,
       }),
@@ -191,7 +199,7 @@ export const useCanvasFftVis = (
         callback: (i, o) => wasmFft.simd_cooley_tukey2(i, o),
         name: "simd2",
         color: "lightgreen",
-        textY: 40,
+        textRow: 3,
         plotOffset: myfftOffset,
         plotScale: myfftScale,
       }),
