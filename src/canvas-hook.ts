@@ -203,6 +203,15 @@ export const useCanvasFftVis = (
         plotOffset: myfftOffset,
         plotScale: myfftScale,
       }),
+
+      new FftBenchmark({
+        callback: (i, o) => wasmFft.simd_cooley_tukey3(i, o),
+        name: "simd3",
+        color: "cyan",
+        textRow: 4,
+        plotOffset: myfftOffset,
+        plotScale: myfftScale,
+      }),
     ];
 
     // Animation Loop
