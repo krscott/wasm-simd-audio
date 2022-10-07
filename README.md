@@ -17,15 +17,16 @@ The calculation time of each algorithm is shown in the upper left with matching 
 ## About
 In this project, I implement a basic FFT algorithm using WASM SIMD instructions  ([`std::arch::wasm32`](https://doc.rust-lang.org/core/arch/wasm32/index.html)).
 
-For example, here is the function for multiplying 2 pairs of complex numbers in parallel:
+For example, here is the function for multiplying 2 pairs of complex numbers in parallel using `f32x4` vectors:
 
-https://github.com/krscott/wasm-simd-audio/blob/46a9537a4378cb6aa854b01e7f668df4a872faad/wasm-audio/src/simd_cooley_tukey2.rs#L48-78
+https://github.com/krscott/wasm-simd-audio/blob/cacd4fcfe6fc48251548056a7e5608c02ef42c96/wasm-audio/src/simd_cooley_tukey2.rs#L47-L78
 
 ## Results
 Although SIMD instructions do allow much faster computation throughput, they do require extra instructions for loading values in and out of the vectors. In my case, one of my SIMD implementations barely matches my naive implementation, and is still 2x slower than the `rustfft` crate:
 
 ![performance](docs/perf.png)
 
+It seems that, at least with the basic Cooley-Tukey algorithm, using SIMD for just inside the body of the loop introduces too much overhead to see much improvement. Overhead could probably be reduced further with manual memory management of the array and unrolling loops.
 
 ## Development
 To start:
