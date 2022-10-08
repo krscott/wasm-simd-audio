@@ -1,4 +1,4 @@
-import { FileUpload } from "./components/ui";
+import { Checkbox, FileUpload } from "./components/ui";
 import { useState, useRef } from "preact/hooks";
 
 import { useCanvasFftVis } from "./canvas-hook";
@@ -10,19 +10,38 @@ export function App() {
   const audioSrcRef = useRef<HTMLAudioElement>(null);
   const [audioFileUrl, setAudioFileUrl] = useState<string | undefined>();
 
-  useCanvasFftVis(!!audioFileUrl, audioSrcRef.current, canvasRef.current);
+  const ui = useCanvasFftVis(
+    !!audioFileUrl,
+    audioSrcRef.current,
+    canvasRef.current
+  );
+  console.log(ui.channels);
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasRect = useElementRect(canvasContainerRef.current);
 
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-5 p-5">
-      <div className="flex items-center gap-4">
-        <FileUpload
-          onUpload={(file) => setAudioFileUrl(URL.createObjectURL(file))}
-        />
-        <div>
-          <audio ref={audioSrcRef} src={audioFileUrl} controls />
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <FileUpload
+              onUpload={(file) => setAudioFileUrl(URL.createObjectURL(file))}
+            />
+          </div>
+          <div>
+            <audio ref={audioSrcRef} src={audioFileUrl} controls />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {ui.channels.map((ch) => (
+            <Checkbox
+              name={ch.name}
+              checked={ch.enabled}
+              onChange={() => ch.setEnabled(!ch.enabled)}
+              color={ch.color}
+            />
+          ))}
         </div>
       </div>
       <div

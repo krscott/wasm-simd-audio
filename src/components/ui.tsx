@@ -11,6 +11,32 @@ export const Button: ParentFc<{
   );
 };
 
+export const Checkbox: Fc<{
+  name: string;
+  checked: boolean;
+  onChange: JSX.GenericEventHandler<HTMLInputElement>;
+  color?: string;
+}> = ({ name, checked, onChange, color }) => {
+  console.log(name, checked, color);
+
+  return (
+    <label>
+      <div
+        className="cursor-pointer rounded-full border border-gray-500 px-3 py-1.5"
+        style={checked ? `background-color: ${color}; color: black` : undefined}
+      >
+        {name}
+      </div>
+      <input
+        type="checkbox"
+        className="hidden"
+        checked={checked}
+        onChange={onChange}
+      />
+    </label>
+  );
+};
+
 export const FileUpload: Fc<{
   onUpload: (file: File) => void;
 }> = ({ onUpload }) => {

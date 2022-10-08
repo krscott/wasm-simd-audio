@@ -1,4 +1,4 @@
-import { useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { WasmFft } from "wasm-audio";
 import { getAudioContext, getAudioSourceNode } from "./util/audiocontext";
 import { NumericRingBuf } from "./util/ringbuf";
@@ -14,40 +14,48 @@ const myfftOffset = libfftOffset + 29.6 * baseScale;
 const myfftScale = libfftScale;
 
 type FftBenchmarkOptions = {
-  callback: (input: Float32Array, output: Float32Array) => void;
+  callback: (
+    analyzer: AnalyserNode,
+    input: Float32Array,
+    output: Float32Array
+  ) => void;
   name: string;
   color: string;
-  textRow?: number;
   plotOffset?: number;
   plotScale?: number;
   ringBufferSize?: number;
-  drawPlot?: boolean;
-  drawCalcTime?: boolean;
+  plotEnabled?: boolean;
+  labelEnabled?: boolean;
+  enabled?: boolean;
 };
 
 class FftBenchmark {
   buf: NumericRingBuf;
   avg: number | undefined;
 
-  callback: (input: Float32Array, output: Float32Array) => void;
+  callback: (
+    analyzer: AnalyserNode,
+    input: Float32Array,
+    output: Float32Array
+  ) => void;
   name: string;
   color: string;
-  textRow: number;
   plotOffset: number;
   plotScale: number;
 
-  drawPlot: boolean;
-  drawCalcTime: boolean;
+  plotEnabled: boolean;
+  labelEnabled: boolean;
+  enabled: boolean;
 
   constructor(opts: FftBenchmarkOptions) {
     this.callback = opts.callback;
     this.name = opts.name;
     this.color = opts.color;
-    this.textRow = opts.textRow ?? 0;
     this.plotOffset = opts.plotOffset ?? baseOffset;
     this.plotScale = opts.plotScale ?? baseScale;
-    this.drawPlot = opts.drawPlot ?? true;
-    this.drawCalcTime = opts.drawCalcTime ?? true;
+    this.plotEnabled = opts.plotEnabled ?? true;
+    this.labelEnabled = opts.labelEnabled ?? true;
+    this.enabled = opts.enabled ?? true;
 
     const size = opts.ringBufferSize ?? 100;
     this.buf = new NumericRingBuf(size);
@@ -62,22 +70,19 @@ class FftBenchmark {
   }
 
   exec(
+    labelRow: number,
+    analyzer: AnalyserNode,
     timeArray: Float32Array,
     freqArray: Float32Array,
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement
   ): void {
-    if (!this.drawCalcTime && !this.drawPlot) {
-      return;
-    }
-
     const perfStart = performance.now();
-    this.callback(timeArray, freqArray);
+    this.callback(analyzer, timeArray, freqArray);
     const perfTime = performance.now() - perfStart;
-
     this.put(perfTime);
 
-    if (this.drawPlot) {
+    if (this.plotEnabled) {
       ctx.strokeStyle = this.color;
       drawFloat32Signal(
         ctx,
@@ -89,18 +94,16 @@ class FftBenchmark {
       );
     }
 
-    if (this.drawCalcTime) {
+    if (this.labelEnabled) {
       const fontSize = Math.min(
         Math.max(Math.round(canvas.height / 40), 12),
         64
       );
       ctx.font = `${fontSize}px monospace`;
       ctx.fillStyle = this.color;
-      ctx.fillText(
-        `${this.name}: ${this.avg?.toFixed(3)} ms`,
-        0,
-        (1 + this.textRow) * fontSize
-      );
+
+      const avg = this.avg ? this.avg.toFixed(3) : "...";
+      ctx.fillText(`${this.name}: ${avg} ms`, 0, (1 + labelRow) * fontSize);
     }
   }
 }
@@ -130,11 +133,24 @@ const drawFloat32Signal = (
   ctx.stroke();
 };
 
+type CanvasFftUiState = {
+  channels: {
+    name: string;
+    color: string;
+    enabled: boolean;
+    setEnabled: (state: boolean) => void;
+  }[];
+};
+
 export const useCanvasFftVis = (
   isUserGesture: boolean,
   audio: HTMLAudioElement | null,
   canvas: HTMLCanvasElement | null
 ) => {
+  const [uiState, setUiState] = useState<CanvasFftUiState>({
+    channels: [],
+  });
+
   useEffect(() => {
     // getAudioContext will fail forever if called without a gesture
     if (!isUserGesture) return;
@@ -163,57 +179,83 @@ export const useCanvasFftVis = (
 
     const ffts = [
       new FftBenchmark({
-        callback: (_i, o) => analyzer.getFloatFrequencyData(o),
-        name: "native",
+        callback: (analyzer, _i, o) => analyzer.getFloatFrequencyData(o),
+        name: "browser",
         color: "white",
-        drawCalcTime: false,
+        labelEnabled: false,
       }),
 
       new FftBenchmark({
-        callback: (i, o) => wasmFft.lib_fft(i, o),
-        name: "rslib",
+        callback: (analyzer, i, o) => wasmFft.dft(i, o),
+        name: "dft  ",
+        color: "red",
+        plotOffset: myfftOffset,
+        plotScale: myfftScale,
+        enabled: false,
+      }),
+
+      new FftBenchmark({
+        callback: (analyzer, i, o) => wasmFft.lib_fft(i, o),
+        name: "lib  ",
         color: "yellow",
-        textRow: 0,
         plotOffset: libfftOffset,
         plotScale: libfftScale,
       }),
 
       new FftBenchmark({
-        callback: (i, o) => wasmFft.cooley_tukey(i, o),
+        callback: (analyzer, i, o) => wasmFft.cooley_tukey(i, o),
         name: "naive",
         color: "orange",
-        textRow: 1,
         plotOffset: myfftOffset,
         plotScale: myfftScale,
       }),
 
       new FftBenchmark({
-        callback: (i, o) => wasmFft.simd_cooley_tukey(i, o),
+        callback: (analyzer, i, o) => wasmFft.simd_cooley_tukey(i, o),
         name: "simd1",
         color: "pink",
-        textRow: 2,
         plotOffset: myfftOffset,
         plotScale: myfftScale,
+        enabled: false,
       }),
 
       new FftBenchmark({
-        callback: (i, o) => wasmFft.simd_cooley_tukey2(i, o),
+        callback: (analyzer, i, o) => wasmFft.simd_cooley_tukey2(i, o),
         name: "simd2",
         color: "lightgreen",
-        textRow: 3,
         plotOffset: myfftOffset,
         plotScale: myfftScale,
       }),
 
       new FftBenchmark({
-        callback: (i, o) => wasmFft.simd_cooley_tukey3(i, o),
+        callback: (analyzer, i, o) => wasmFft.simd_cooley_tukey3(i, o),
         name: "simd3",
         color: "cyan",
-        textRow: 4,
         plotOffset: myfftOffset,
         plotScale: myfftScale,
+        enabled: false,
       }),
     ];
+
+    const refreshUiState = () => {
+      return setUiState({
+        channels: ffts.map((fft) => {
+          fft.buf.clear();
+
+          return {
+            name: fft.name,
+            color: fft.color,
+            enabled: fft.enabled,
+            setEnabled: (state) => {
+              fft.enabled = state;
+              refreshUiState();
+            },
+          };
+        }),
+      });
+    };
+
+    refreshUiState();
 
     // Animation Loop
     const animate = () => {
@@ -245,8 +287,15 @@ export const useCanvasFftVis = (
         canvas.height * 0.5
       );
 
+      let labelRow = 0;
       for (const fft of ffts) {
-        fft.exec(timeArray, freqArray, ctx, canvas);
+        if (fft.enabled) {
+          fft.exec(labelRow, analyzer, timeArray, freqArray, ctx, canvas);
+
+          if (fft.enabled && fft.labelEnabled) {
+            labelRow += 1;
+          }
+        }
       }
     };
 
@@ -256,4 +305,6 @@ export const useCanvasFftVis = (
       stopFlag = true;
     };
   }, [isUserGesture, audio, canvas]);
+
+  return uiState;
 };
