@@ -1,7 +1,7 @@
 use rustfft::{num_complex::Complex, num_traits::Zero, FftPlanner};
 use wasm_bindgen::prelude::*;
 
-use crate::{cooley_tukey::cooley_tukey_fft, dft::dft};
+use crate::{cooley_tukey::cooley_tukey_fft, dft::dft, simd_cooley_tukey3::Complex4};
 
 #[wasm_bindgen]
 pub struct WasmFft {
@@ -9,6 +9,9 @@ pub struct WasmFft {
     input_buffer: Vec<Complex<f32>>,
     output_buffer: Vec<Complex<f32>>,
     scratch_buffer: Vec<Complex<f32>>,
+
+    input_buffer_x4: Vec<Complex4>,
+    output_buffer_x4: Vec<Complex4>,
 }
 
 #[wasm_bindgen]
@@ -28,11 +31,16 @@ impl WasmFft {
         let fft = planner.plan_fft_forward(capacity);
         let scratch_buffer = vec![Complex::zero(); fft.get_outofplace_scratch_len()];
 
+        let input_buffer_x4 = vec![Complex4::zero(); capacity];
+        let output_buffer_x4 = vec![Complex4::zero(); capacity];
+
         Self {
             planner,
             input_buffer,
             output_buffer,
             scratch_buffer,
+            input_buffer_x4,
+            output_buffer_x4,
         }
     }
 
@@ -152,21 +160,29 @@ impl WasmFft {
         assert_eq!(input.len(), output.len() * 2);
         assert!(crate::is_power_of_2(input.len()));
 
-        self.input_buffer.resize(input.len(), Complex::zero());
-        self.output_buffer.resize(input.len(), Complex::zero());
+        self.input_buffer_x4.resize(input.len(), Complex4::zero());
+        self.output_buffer_x4.resize(input.len(), Complex4::zero());
 
         for (i, &r) in input.iter().enumerate() {
-            self.input_buffer[i].re = r;
+            self.input_buffer_x4[i] = Complex4::real(r);
         }
 
         crate::simd_cooley_tukey3::simd_cooley_tukey_fft3(
-            &self.input_buffer,
-            &mut self.output_buffer,
+            &self.input_buffer_x4,
+            &mut self.output_buffer_x4,
         );
 
         (0..output.len()).for_each(|i| {
-            output[i] = (self.output_buffer[i].norm()).log10();
+            output[i] = (self.output_buffer_x4[i].norm()).log10();
         });
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn test(&self) -> bool {
+        crate::simd_cooley_tukey2::test_simd_complex_mul();
+        crate::simd_cooley_tukey3::test_mul_parallel();
+
+        true
     }
 }
 

@@ -149,6 +149,7 @@ export const useCanvasFftVis = (
     let stopFlag = false;
 
     const wasmFft = WasmFft.new();
+    console.log("tests:", wasmFft.test());
 
     const analyzer = audioContext.createAnalyser();
     analyzer.fftSize = 1024;

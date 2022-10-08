@@ -88,3 +88,15 @@ fn simd_complex_mul(
         },
     )
 }
+
+pub fn test_simd_complex_mul() {
+    use approx::assert_abs_diff_eq;
+
+    let a = Complex { re: 1.23, im: 2.34 };
+    let b = Complex { re: 0.56, im: 1.11 };
+
+    let (out0, out1) = simd_complex_mul(a, b, a, b);
+
+    assert_abs_diff_eq!(out0.norm(), out1.norm());
+    assert_abs_diff_eq!((a * b).norm(), out0.norm());
+}
