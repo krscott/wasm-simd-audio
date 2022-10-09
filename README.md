@@ -4,6 +4,8 @@ An exporation in FFT implementation using Rust+WASM+SIMD.
 
 🎧 [Live demo](https://krscott.github.io/wasm-simd-audio/)
 
+> ⚠ SIMD does not yet have support in every modern browser. Be sure to use a [browser that supports WASM SIMD](https://webassembly.org/roadmap/).
+
 ## Usage
 
 1. Get a [punchy audio file](https://opengameart.org/art-search-advanced?keys=&field_art_type_tid%5B%5D=12&sort_by=count&sort_order=DESC) ready to upload
@@ -27,7 +29,13 @@ Although SIMD instructions do allow much faster computation throughput, they do 
 
 ![performance](docs/perf.png)
 
-It seems that, at least with the basic Cooley-Tukey algorithm, using SIMD for just inside the body of the loop introduces too much overhead to see much improvement. Overhead could probably be reduced further with manual memory management of the array and unrolling loops.
+It seems that, at least with the basic Cooley-Tukey algorithm, using SIMD for just inside the body of the loop introduces too much overhead to see much improvement, especially compared to normal optimization. I tried keeping the intermediate values as `v128` vectors to save some conversion (see [`simd_cooley_tukey3.rs`](wasm-audio/src/simd_cooley_tukey3.rs)), but it didn't seem to have much effect.
+
+## TODO
+
+- [ ] Compare generated WASM instructions to see how wasm-pack is optimizing. The `wasm32` instructions might be preventing some compiler optimizations.
+- [ ] Look into [SFFT](https://www.cs.waikato.ac.nz/~ihw/PhD_theses/Anthony_Blake.pdf) implementation.
+- [ ] Move WASM code to worker node. Currently the FFTs are evaluated in the main thread. This requires manually sending the WASM binary blob to the worker thread at runtime.
 
 ## Development
 To start:
